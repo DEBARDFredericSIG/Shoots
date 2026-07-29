@@ -159,7 +159,10 @@ export default function ControllerScreen() {
 
   const stopSequence = useCallback(() => {
     isRunningRef.current = false;
-    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    setIsRunning(false);
+    setCountdownMs(0);
+    // Ne pas clearInterval ici — le setInterval vérifie isRunningRef à chaque tick (100ms)
+    // et appelle resolve() lui-même. Tuer l'interval avant resolve() = Promise qui ne résout jamais = gel.
   }, []);
 
   // ── Derived
