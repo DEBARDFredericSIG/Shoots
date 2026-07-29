@@ -338,6 +338,7 @@ export default function ControllerScreen() {
             fallback={fallback}
             appliedExposure={currentStep ? {
               iso: currentStep.iso,
+              shutterSpeed: currentStep.shutterSpeed,
               focusMode: currentStep.focusMode,
             } : undefined}
           />

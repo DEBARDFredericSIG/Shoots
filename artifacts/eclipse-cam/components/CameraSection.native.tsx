@@ -1,18 +1,41 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { StyleSheet, View, Text, Pressable, useWindowDimensions } from 'react-native';
+import {
+  Camera,
+  useCameraPermission,
+  usePhotoOutput,
+  type CameraRef,
+} from 'react-native-vision-camera';
 import * as MediaLibrary from 'expo-media-library';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import type { CameraHandle, CameraSectionProps } from './CameraSection.types';
 
-// Convertit le focusMode en paramètres CameraView
-// focusDistance : 0 = infini, 1 = très proche
-function toFocusProps(mode?: string) {
-  if (mode === 'infinity')      return { autofocus: 'off' as const, focusDepth: 0 };
-  if (mode === 'near-infinity') return { autofocus: 'off' as const, focusDepth: 0.05 };
-  return { autofocus: 'on' as const };  // hyperfocal → autofocus
+// ── Shutter speed string → seconds ──────────────────────────────────────────
+// "1/1000" → 0.001   "1/500" → 0.002   "2s" → 2   "30s" → 30
+function parseShutter(s: string): number {
+  if (!s) return 1 / 125;
+  const trimmed = s.trim();
+  if (trimmed.includes('/')) {
+    const [num, den] = trimmed.split('/').map(Number);
+    if (isNaN(num) || isNaN(den) || den === 0) return 1 / 125;
+    return num / den;
+  }
+  const val = parseFloat(trimmed.replace(/s$/i, ''));
+  return isNaN(val) ? 1 / 125 : val;
 }
+
+// EV bias relative to 1/125 s (neutral daylight reference)
+// Negative = faster/darker, positive = slower/brighter
+function shutterToEV(shutterSpeed: string): number {
+  const target = parseShutter(shutterSpeed);
+  const reference = 1 / 125;
+  const ev = Math.log2(target / reference);
+  // Clamp to typical device range ±8
+  return Math.max(-8, Math.min(8, ev));
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
 
 const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
   function CameraSection(
@@ -20,44 +43,62 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
     ref,
   ) {
     const colors = useColors();
-    const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+    const { width: screenW, height: screenH } = useWindowDimensions();
+    const { hasPermission, requestPermission } = useCameraPermission();
     const [mediaGranted, setMediaGranted] = useState(false);
-    const cameraRef = useRef<CameraView>(null);
+    const cameraRef = useRef<CameraRef>(null);
 
-    const focusProps = toFocusProps(appliedExposure?.focusMode);
+    // Photo output — connected to <Camera outputs={[photoOutput]} />
+    const photoOutput = usePhotoOutput({ quality: 0.92, containerFormat: 'jpeg' });
 
-    // Request media permission safely — avoids AUDIO crash in Expo Go by catching it
-    const requestMediaSafe = async () => {
-      try {
-        const result = await MediaLibrary.requestPermissionsAsync();
-        setMediaGranted(result.granted);
-      } catch {
-        // expo-media-library v18+ crashes in Expo Go due to AUDIO permission not in manifest.
-        // In a proper APK build (eas build) this works correctly.
-        setMediaGranted(false);
-      }
-    };
+    // EV bias derived from shutter speed (pushes auto-exposure toward target)
+    const evBias = appliedExposure ? shutterToEV(appliedExposure.shutterSpeed) : 0;
 
+    // Media library permission (safe — fails silently in Expo Go)
     useEffect(() => {
-      if (cameraPermission?.granted) {
+      if (hasPermission) {
         onPermissionGranted?.();
-        requestMediaSafe();
+        MediaLibrary.requestPermissionsAsync()
+          .then(r => setMediaGranted(r.granted))
+          .catch(() => setMediaGranted(false));
       }
-    }, [cameraPermission?.granted]);
+    }, [hasPermission]);
 
-    // Expose takePicture to parent
+    // Apply focus when step changes
+    useEffect(() => {
+      const cam = cameraRef.current;
+      if (!cam || !appliedExposure) return;
+      const mode = appliedExposure.focusMode;
+      if (mode === 'infinity') {
+        // Focus to top-center (sky/infinity) and lock
+        cam.focusTo(
+          { x: screenW / 2, y: screenH * 0.12 },
+          { adaptiveness: 'locked', autoResetAfter: null },
+        ).catch(() => {});
+      } else if (mode === 'near-infinity') {
+        // Focus to center and lock
+        cam.focusTo(
+          { x: screenW / 2, y: screenH * 0.35 },
+          { adaptiveness: 'locked', autoResetAfter: null },
+        ).catch(() => {});
+      } else {
+        // hyperfocal → continuous autofocus
+        cam.resetFocus().catch(() => {});
+      }
+    }, [appliedExposure?.focusMode, screenW, screenH]);
+
+    // Expose takePicture to sequence controller
     useImperativeHandle(ref, () => ({
       takePicture: async () => {
-        if (!cameraRef.current || !cameraPermission?.granted) return null;
+        if (!hasPermission) return null;
         try {
-          const photo = await cameraRef.current.takePictureAsync({
-            quality: 0.92,
-            exif: true,
-            skipProcessing: true,
-          });
-          if (photo?.uri && mediaGranted) {
-            // Fire-and-forget: save to "Eclipse Cam" album without blocking sequence
-            const uri = photo.uri;
+          const file = await photoOutput.capturePhotoToFile(
+            { flashMode: 'off' },
+            {},
+          );
+          const uri = `file://${file.filePath}`;
+          if (mediaGranted) {
+            // Fire-and-forget: save to "Eclipse Cam" album
             MediaLibrary.createAssetAsync(uri)
               .then(async asset => {
                 const album = await MediaLibrary.getAlbumAsync('Eclipse Cam');
@@ -69,7 +110,7 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
               })
               .catch(() => {});
           }
-          return photo?.uri ?? null;
+          return uri;
         } catch {
           return null;
         }
@@ -77,7 +118,7 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
     }));
 
     // Permission not yet granted
-    if (!cameraPermission?.granted) {
+    if (!hasPermission) {
       return (
         <View style={styles.root}>
           <View style={[styles.permCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -96,10 +137,7 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
                 styles.permBtn,
                 { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
               ]}
-              onPress={async () => {
-                const result = await requestCameraPermission();
-                if (result.granted) onPermissionGranted?.();
-              }}
+              onPress={requestPermission}
             >
               <Text style={[styles.permBtnText, { color: colors.primaryForeground }]}>
                 Autoriser la caméra
@@ -113,13 +151,19 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
 
     return (
       <View style={styles.root}>
-        <CameraView
+        {/* VisionCamera viewfinder
+            - exposure: EV bias calculé depuis la vitesse d'obturation de l'étape
+            - outputs: photoOutput pour capturePhotoToFile()
+            La mise au point (focus) est appliquée via ref.focusTo() / ref.resetFocus()
+            quand l'étape change (useEffect ci-dessus).
+        */}
+        <Camera
           ref={cameraRef}
           style={StyleSheet.absoluteFill}
-          facing="back"
-          flash="off"
-          iso={appliedExposure?.iso}
-          {...focusProps}
+          device="back"
+          isActive={true}
+          outputs={[photoOutput]}
+          exposure={evBias}
         />
 
         {/* Running overlay */}
