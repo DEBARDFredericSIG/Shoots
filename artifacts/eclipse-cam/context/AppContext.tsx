@@ -43,6 +43,7 @@ export interface CapturedShot {
   aperture: string;
   focusMode: FocusMode;
   timestamp: number;
+  uri?: string; // URI locale retournée par takePictureAsync (disponible même dans Expo Go)
 }
 
 export interface Session {

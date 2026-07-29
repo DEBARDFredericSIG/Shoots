@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FlatList,
+  Image,
+  Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -16,6 +19,45 @@ import {
   useAppContext,
   type Session,
 } from '@/context/AppContext';
+
+function PhotoGrid({ shots, colors }: { shots: Session['shots']; colors: ReturnType<typeof useColors> }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const withUri = shots.filter(s => s.uri);
+  if (withUri.length === 0) return null;
+
+  return (
+    <>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={[styles.photoStrip, { borderTopColor: colors.border }]}
+        contentContainerStyle={styles.photoStripContent}
+      >
+        {withUri.map(shot => (
+          <Pressable key={shot.id} onPress={() => setSelected(shot.uri!)}>
+            <Image source={{ uri: shot.uri }} style={styles.thumb} />
+            <View style={styles.thumbLabel}>
+              <Text style={styles.thumbLabelText} numberOfLines={1}>{shot.stepName}</Text>
+            </View>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      <Modal visible={!!selected} transparent animationType="fade" onRequestClose={() => setSelected(null)}>
+        <Pressable style={styles.modalBg} onPress={() => setSelected(null)}>
+          {selected && (
+            <Image
+              source={{ uri: selected }}
+              style={styles.fullImg}
+              resizeMode="contain"
+            />
+          )}
+          <Text style={styles.modalHint}>Appuyez pour fermer</Text>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
 
 function SessionItem({ session }: { session: Session }) {
   const colors = useColors();
@@ -114,6 +156,9 @@ function SessionItem({ session }: { session: Session }) {
           </View>
         ))}
       </View>
+
+      {/* Photo thumbnails (URI disponible même sans galerie) */}
+      <PhotoGrid shots={session.shots} colors={colors} />
 
       {/* Shot log */}
       {session.shots.length > 0 && (
@@ -345,6 +390,26 @@ const styles = StyleSheet.create({
   },
   focusMiniText: { fontSize: 10, fontWeight: '700' },
   moreShots: { fontSize: 11, textAlign: 'center', paddingVertical: 8 },
+
+  // Photo strip
+  photoStrip: { borderTopWidth: 1 },
+  photoStripContent: { padding: 10, gap: 8, flexDirection: 'row' },
+  thumb: { width: 80, height: 80, borderRadius: 8, backgroundColor: '#111' },
+  thumbLabel: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(0,0,0,0.55)', borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
+    paddingHorizontal: 4, paddingVertical: 2,
+  },
+  thumbLabelText: { fontSize: 9, color: '#fff', fontWeight: '600' },
+
+  // Fullscreen modal
+  modalBg: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  fullImg: { width: '100%', height: '85%' },
+  modalHint: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 16 },
+
   empty: {
     flex: 1,
     alignItems: 'center',

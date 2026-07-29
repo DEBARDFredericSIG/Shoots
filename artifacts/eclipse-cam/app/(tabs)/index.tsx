@@ -136,12 +136,13 @@ export default function ControllerScreen() {
         if (!isRunningRef.current) break;
 
         triggerFlash();
-        await cameraRef.current?.takePicture();
+        const photoUri = await cameraRef.current?.takePicture();
 
         const shot: CapturedShot = {
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           stepName: step.name, iso: step.iso, shutterSpeed: step.shutterSpeed,
           aperture: step.aperture, focusMode: step.focusMode, timestamp: Date.now(),
+          uri: photoUri ?? undefined,
         };
         shots.push(shot);
         setTotalShotsFired(prev => prev + 1);
