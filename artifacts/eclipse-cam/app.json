@@ -41,7 +41,21 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Eclipse Cam utilise l'appareil photo pour capturer automatiquement les photos de la séquence."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Eclipse Cam sauvegarde vos photos dans la galerie.",
+          "savePhotosPermission": "Eclipse Cam sauvegarde vos photos dans la galerie.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

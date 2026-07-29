@@ -1,6 +1,7 @@
-import React, { forwardRef, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import type { CameraHandle, CameraSectionProps } from './CameraSection.types';
@@ -12,7 +13,27 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
   ) {
     const colors = useColors();
     const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+    const [mediaGranted, setMediaGranted] = useState(false);
     const cameraRef = useRef<CameraView>(null);
+
+    // Request media permission safely — avoids AUDIO crash in Expo Go by catching it
+    const requestMediaSafe = async () => {
+      try {
+        const result = await MediaLibrary.requestPermissionsAsync();
+        setMediaGranted(result.granted);
+      } catch {
+        // expo-media-library v18+ crashes in Expo Go due to AUDIO permission not in manifest.
+        // In a proper APK build (eas build) this works correctly.
+        setMediaGranted(false);
+      }
+    };
+
+    useEffect(() => {
+      if (cameraPermission?.granted) {
+        onPermissionGranted?.();
+        requestMediaSafe();
+      }
+    }, [cameraPermission?.granted]);
 
     // Expose takePicture to parent
     useImperativeHandle(ref, () => ({
@@ -24,8 +45,20 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
             exif: true,
             skipProcessing: true,
           });
-          // Note: saving to gallery from Expo Go requires a development build
-          // (expo-media-library v18+ is not compatible with Expo Go on Android)
+          if (photo?.uri && mediaGranted) {
+            // Fire-and-forget: save to "Eclipse Cam" album without blocking sequence
+            const uri = photo.uri;
+            MediaLibrary.createAssetAsync(uri)
+              .then(async asset => {
+                const album = await MediaLibrary.getAlbumAsync('Eclipse Cam');
+                if (!album) {
+                  await MediaLibrary.createAlbumAsync('Eclipse Cam', asset, false);
+                } else {
+                  await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+                }
+              })
+              .catch(() => {});
+          }
           return photo?.uri ?? null;
         } catch {
           return null;
@@ -33,7 +66,7 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
       },
     }));
 
-    // Permission not yet granted — show request card + static fallback below
+    // Permission not yet granted
     if (!cameraPermission?.granted) {
       return (
         <View style={styles.root}>
@@ -46,7 +79,7 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
             />
             <Text style={[styles.permTitle, { color: colors.foreground }]}>Accès caméra requis</Text>
             <Text style={[styles.permDesc, { color: colors.mutedForeground }]}>
-              Pour afficher le viseur en direct pendant la séquence.
+              Pour afficher le viseur en direct et capturer les photos automatiquement.
             </Text>
             <Pressable
               style={({ pressed }) => [
