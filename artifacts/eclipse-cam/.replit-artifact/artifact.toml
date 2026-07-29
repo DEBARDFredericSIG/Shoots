@@ -1,0 +1,23 @@
+kind = "mobile"
+previewPath = "/"
+title = "Eclipse Cam"
+version = "1.0.0"
+id = "artifacts/eclipse-cam"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 21236
+
+[services.development]
+run = "pnpm --filter @workspace/eclipse-cam run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/eclipse-cam", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/eclipse-cam", "run", "serve" ]
+
+[services.env]
+PORT = "21236"
+BASE_PATH = "/"
