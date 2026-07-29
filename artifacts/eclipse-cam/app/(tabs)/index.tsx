@@ -227,8 +227,8 @@ export default function ControllerScreen() {
   const modeColor = activeMode === 'eclipse' ? colors.primary : colors.accent;
   const modeLabel = activeMode === 'eclipse' ? 'ÉCLIPSE' : 'LUNE';
 
+  const TAB_BAR_HEIGHT = Platform.OS === 'web' ? 84 : 49;
   const webTopPad = Platform.OS === 'web' ? 67 : 0;
-  const webBottomPad = Platform.OS === 'web' ? 34 : 0;
 
   return (
     <View
@@ -250,7 +250,7 @@ export default function ControllerScreen() {
           styles.container,
           {
             paddingTop: insets.top + webTopPad + 8,
-            paddingBottom: insets.bottom + webBottomPad + 8,
+            paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 12,
           },
         ]}
       >
