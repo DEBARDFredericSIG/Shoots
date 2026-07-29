@@ -1,53 +1,31 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as MediaLibrary from 'expo-media-library';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import type { CameraHandle, CameraSectionProps } from './CameraSection.types';
 
 const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
   function CameraSection(
-    { fallback, runningOverlay, idleOverlay, isRunning, onPermissionGranted, modeColor, idleBadgeText },
+    { fallback, runningOverlay, isRunning, onPermissionGranted, modeColor, idleBadgeText },
     ref,
   ) {
     const colors = useColors();
     const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-    const [mediaPermission, requestMediaPermission] = MediaLibrary.usePermissions();
     const cameraRef = useRef<CameraView>(null);
-
-    useEffect(() => {
-      if (cameraPermission?.granted) {
-        onPermissionGranted?.();
-        if (!mediaPermission?.granted) requestMediaPermission();
-      }
-    }, [cameraPermission?.granted]);
 
     // Expose takePicture to parent
     useImperativeHandle(ref, () => ({
       takePicture: async () => {
         if (!cameraRef.current || !cameraPermission?.granted) return null;
         try {
-          // skipProcessing speeds up capture significantly on Android
           const photo = await cameraRef.current.takePictureAsync({
             quality: 0.92,
             exif: true,
             skipProcessing: true,
           });
-          if (photo?.uri && mediaPermission?.granted) {
-            // Save to gallery in background — don't block the sequence loop
-            const uri = photo.uri;
-            MediaLibrary.createAssetAsync(uri)
-              .then(async asset => {
-                const album = await MediaLibrary.getAlbumAsync('Eclipse Cam');
-                if (!album) {
-                  await MediaLibrary.createAlbumAsync('Eclipse Cam', asset, false);
-                } else {
-                  await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-                }
-              })
-              .catch(() => {/* silent – galerie non-critique */});
-          }
+          // Note: saving to gallery from Expo Go requires a development build
+          // (expo-media-library v18+ is not compatible with Expo Go on Android)
           return photo?.uri ?? null;
         } catch {
           return null;
@@ -55,24 +33,34 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
       },
     }));
 
-    // Permission not yet determined or denied
+    // Permission not yet granted — show request card + static fallback below
     if (!cameraPermission?.granted) {
       return (
         <View style={styles.root}>
           <View style={[styles.permCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <MaterialCommunityIcons name="camera-off" size={32} color={colors.mutedForeground} style={{ marginBottom: 10 }} />
+            <MaterialCommunityIcons
+              name="camera-off"
+              size={32}
+              color={colors.mutedForeground}
+              style={{ marginBottom: 10 }}
+            />
             <Text style={[styles.permTitle, { color: colors.foreground }]}>Accès caméra requis</Text>
             <Text style={[styles.permDesc, { color: colors.mutedForeground }]}>
-              Pour afficher le viseur et capturer les photos automatiquement dans votre galerie.
+              Pour afficher le viseur en direct pendant la séquence.
             </Text>
             <Pressable
-              style={({ pressed }) => [styles.permBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}
+              style={({ pressed }) => [
+                styles.permBtn,
+                { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
+              ]}
               onPress={async () => {
-                await requestCameraPermission();
-                await requestMediaPermission();
+                const result = await requestCameraPermission();
+                if (result.granted) onPermissionGranted?.();
               }}
             >
-              <Text style={[styles.permBtnText, { color: colors.primaryForeground }]}>Autoriser la caméra</Text>
+              <Text style={[styles.permBtnText, { color: colors.primaryForeground }]}>
+                Autoriser la caméra
+              </Text>
             </Pressable>
           </View>
           {fallback}
@@ -86,19 +74,16 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
 
         {/* Running overlay */}
         {isRunning && runningOverlay && (
-          <View style={styles.overlay}>{runningOverlay}</View>
+          <View style={styles.runningOverlay}>{runningOverlay}</View>
         )}
 
-        {/* Idle overlay */}
+        {/* Idle overlay — crosshair + badge */}
         {!isRunning && (
           <View style={StyleSheet.absoluteFill}>
-            {idleOverlay}
-            {/* Crosshair */}
             <View style={styles.crosshairWrap}>
               <View style={[styles.crosshairH, { backgroundColor: modeColor + '99' }]} />
               <View style={[styles.crosshairV, { backgroundColor: modeColor + '99' }]} />
             </View>
-            {/* Badge */}
             {idleBadgeText && (
               <View style={[styles.idleBadge, { borderColor: modeColor + '66' }]}>
                 <Text style={[styles.idleBadgeText, { color: modeColor }]}>{idleBadgeText}</Text>
@@ -115,7 +100,7 @@ export default CameraSection;
 
 const styles = StyleSheet.create({
   root: { flex: 1, borderRadius: 16, overflow: 'hidden', position: 'relative' },
-  overlay: {
+  runningOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
