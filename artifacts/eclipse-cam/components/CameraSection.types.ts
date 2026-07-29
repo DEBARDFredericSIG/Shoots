@@ -1,4 +1,4 @@
-import type { ReactNode, RefObject } from 'react';
+import type { ReactNode, Ref } from 'react';
 import type { FocusMode } from '@/context/AppContext';
 
 export type CameraHandle = {
@@ -13,7 +13,8 @@ export type AppliedExposure = {
 };
 
 export type CameraSectionProps = {
-  cameraRef?: RefObject<CameraHandle | null>;
+  /** React 19 — ref passé comme prop ordinaire (pas forwardRef) */
+  ref?: Ref<CameraHandle | null>;
   fallback: ReactNode;
   runningOverlay?: ReactNode;
   isRunning: boolean;

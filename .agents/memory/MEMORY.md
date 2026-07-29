@@ -1,0 +1,2 @@
+- [VisionCamera v5 architecture](vc5-architecture.md) — Camera component + usePhotoOutput + ref.focusTo(); exposure via EV bias prop; PhotoFile.filePath (not .uri)
+- [Eclipse Cam newArch](eclipse-newarch.md) — newArchEnabled must stay true for VisionCamera v5 + Nitro; icons broken in Expo Go but work in APK

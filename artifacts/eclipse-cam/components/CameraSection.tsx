@@ -6,7 +6,9 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import type { CameraSectionProps } from './CameraSection.types';
 
-export default function CameraSection({ fallback }: CameraSectionProps) {
+// Web stub — ref ignoré, la caméra est native uniquement
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function CameraSection({ fallback, ref: _ref, ..._ }: CameraSectionProps) {
   return <View style={styles.root}>{fallback}</View>;
 }
 

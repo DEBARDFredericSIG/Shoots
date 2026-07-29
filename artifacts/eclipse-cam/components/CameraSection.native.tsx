@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet, View, Text, Pressable, useWindowDimensions } from 'react-native';
 import {
   Camera,
@@ -35,13 +35,11 @@ function shutterToEV(shutterSpeed: string): number {
   return Math.max(-8, Math.min(8, ev));
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+// ── Component (React 19 — ref comme prop ordinaire, pas forwardRef) ──────────
 
-const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
-  function CameraSection(
-    { fallback, runningOverlay, isRunning, onPermissionGranted, modeColor, idleBadgeText, appliedExposure },
-    ref,
-  ) {
+function CameraSection(
+  { ref, fallback, runningOverlay, isRunning, onPermissionGranted, modeColor, idleBadgeText, appliedExposure }: CameraSectionProps,
+) {
     const colors = useColors();
     const { width: screenW, height: screenH } = useWindowDimensions();
     const { hasPermission, requestPermission } = useCameraPermission();
@@ -62,7 +60,7 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
           .then(r => setMediaGranted(r.granted))
           .catch(() => setMediaGranted(false));
       }
-    }, [hasPermission]);
+    }, [hasPermission]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Apply focus when step changes
     useEffect(() => {
@@ -187,8 +185,7 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
         )}
       </View>
     );
-  },
-);
+}
 
 export default CameraSection;
 
