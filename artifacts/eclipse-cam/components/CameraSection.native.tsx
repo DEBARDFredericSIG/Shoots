@@ -28,15 +28,25 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
       takePicture: async () => {
         if (!cameraRef.current || !cameraPermission?.granted) return null;
         try {
-          const photo = await cameraRef.current.takePictureAsync({ quality: 1, exif: true });
+          // skipProcessing speeds up capture significantly on Android
+          const photo = await cameraRef.current.takePictureAsync({
+            quality: 0.92,
+            exif: true,
+            skipProcessing: true,
+          });
           if (photo?.uri && mediaPermission?.granted) {
-            const asset = await MediaLibrary.createAssetAsync(photo.uri);
-            let album = await MediaLibrary.getAlbumAsync('Eclipse Cam');
-            if (!album) {
-              await MediaLibrary.createAlbumAsync('Eclipse Cam', asset, false);
-            } else {
-              await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-            }
+            // Save to gallery in background — don't block the sequence loop
+            const uri = photo.uri;
+            MediaLibrary.createAssetAsync(uri)
+              .then(async asset => {
+                const album = await MediaLibrary.getAlbumAsync('Eclipse Cam');
+                if (!album) {
+                  await MediaLibrary.createAlbumAsync('Eclipse Cam', asset, false);
+                } else {
+                  await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+                }
+              })
+              .catch(() => {/* silent – galerie non-critique */});
           }
           return photo?.uri ?? null;
         } catch {
