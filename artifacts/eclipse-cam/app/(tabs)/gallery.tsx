@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   FlatList,
   Image,
   Modal,
@@ -10,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import * as MediaLibrary from 'expo-media-library';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
@@ -22,8 +24,32 @@ import {
 
 function PhotoGrid({ shots, colors }: { shots: Session['shots']; colors: ReturnType<typeof useColors> }) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const withUri = shots.filter(s => s.uri);
   if (withUri.length === 0) return null;
+
+  const saveToGallery = async (uri: string) => {
+    setSaving(true);
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission refusée', 'Autorisez l\'accès à la galerie dans les réglages.');
+        return;
+      }
+      const asset = await MediaLibrary.createAssetAsync(uri);
+      const album = await MediaLibrary.getAlbumAsync('Eclipse Cam');
+      if (!album) {
+        await MediaLibrary.createAlbumAsync('Eclipse Cam', asset, false);
+      } else {
+        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+      }
+      Alert.alert('✓ Sauvegardé', 'Photo ajoutée à l\'album Eclipse Cam.');
+    } catch {
+      Alert.alert('Erreur', 'Impossible de sauvegarder (normal dans Expo Go).');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -44,7 +70,8 @@ function PhotoGrid({ shots, colors }: { shots: Session['shots']; colors: ReturnT
       </ScrollView>
 
       <Modal visible={!!selected} transparent animationType="fade" onRequestClose={() => setSelected(null)}>
-        <Pressable style={styles.modalBg} onPress={() => setSelected(null)}>
+        <View style={styles.modalBg}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelected(null)} />
           {selected && (
             <Image
               source={{ uri: selected }}
@@ -52,8 +79,19 @@ function PhotoGrid({ shots, colors }: { shots: Session['shots']; colors: ReturnT
               resizeMode="contain"
             />
           )}
-          <Text style={styles.modalHint}>Appuyez pour fermer</Text>
-        </Pressable>
+          <View style={styles.modalActions}>
+            <Pressable
+              style={[styles.saveBtn, { backgroundColor: saving ? '#444' : '#f09220' }]}
+              onPress={() => selected && saveToGallery(selected)}
+              disabled={saving}
+            >
+              <Text style={styles.saveBtnText}>{saving ? 'Sauvegarde…' : '↓ Sauvegarder'}</Text>
+            </Pressable>
+            <Pressable style={styles.closeBtn} onPress={() => setSelected(null)}>
+              <Text style={styles.closeBtnText}>Fermer</Text>
+            </Pressable>
+          </View>
+        </View>
       </Modal>
     </>
   );
@@ -407,8 +445,17 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
     alignItems: 'center', justifyContent: 'center',
   },
-  fullImg: { width: '100%', height: '85%' },
-  modalHint: { color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 16 },
+  fullImg: { width: '100%', height: '75%' },
+  modalActions: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  saveBtn: {
+    paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12,
+  },
+  saveBtnText: { color: '#08090e', fontWeight: '700', fontSize: 14 },
+  closeBtn: {
+    paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  closeBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 
   empty: {
     flex: 1,

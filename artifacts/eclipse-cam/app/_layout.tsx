@@ -42,9 +42,13 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
-    ...Ionicons.font,
-    ...MaterialCommunityIcons.font,
   });
+
+  // Charger les polices d'icônes via leur méthode dédiée (respecte le bon fontFamily interne)
+  useEffect(() => {
+    Ionicons.loadFont().catch(() => {});
+    MaterialCommunityIcons.loadFont().catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
