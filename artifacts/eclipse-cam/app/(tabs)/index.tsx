@@ -182,12 +182,14 @@ export default function ControllerScreen() {
       <CountdownRing totalMs={totalCountdownMs} remainingMs={countdownMs} size={180} />
       <View style={styles.settingsRow}>
         {[
-          { label: 'ISO', value: String(currentStep.iso) },
-          { label: 'VITESSE', value: currentStep.shutterSpeed },
-          { label: 'OUVERTURE', value: currentStep.aperture },
+          { label: 'ISO', value: String(currentStep.iso), real: true },
+          { label: 'VITESSE', value: currentStep.shutterSpeed, real: false },
+          { label: 'OUVERTURE', value: currentStep.aperture, real: false },
         ].map(item => (
-          <View key={item.label} style={styles.settingBox}>
-            <Text style={styles.settingLabel}>{item.label}</Text>
+          <View key={item.label} style={[styles.settingBox, !item.real && styles.settingBoxFake]}>
+            <Text style={styles.settingLabel}>
+              {item.label}{item.real ? ' ✓' : ' ~'}
+            </Text>
             <Text style={styles.settingValue}>{item.value}</Text>
           </View>
         ))}
@@ -334,6 +336,10 @@ export default function ControllerScreen() {
             idleBadgeText={selectedSequence ? `${selectedSequence.name} • ${totalShots} photos` : undefined}
             runningOverlay={runningOverlay}
             fallback={fallback}
+            appliedExposure={currentStep ? {
+              iso: currentStep.iso,
+              focusMode: currentStep.focusMode,
+            } : undefined}
           />
         </View>
 
@@ -421,6 +427,10 @@ const styles = StyleSheet.create({
   settingBox: {
     flex: 1, alignItems: 'center', padding: 10, borderRadius: 12, borderWidth: 1,
     backgroundColor: 'rgba(0,0,0,0.5)', borderColor: 'rgba(255,255,255,0.15)',
+  },
+  settingBoxFake: {
+    opacity: 0.5,
+    borderStyle: 'dashed',
   },
   settingLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, marginBottom: 4, color: 'rgba(255,255,255,0.6)' },
   settingValue: { fontSize: 18, fontWeight: '700', letterSpacing: -0.5, color: '#fff' },

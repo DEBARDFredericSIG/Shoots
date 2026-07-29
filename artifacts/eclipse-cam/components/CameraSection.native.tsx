@@ -6,15 +6,25 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import type { CameraHandle, CameraSectionProps } from './CameraSection.types';
 
+// Convertit le focusMode en paramètres CameraView
+// focusDistance : 0 = infini, 1 = très proche
+function toFocusProps(mode?: string) {
+  if (mode === 'infinity')      return { autofocus: 'off' as const, focusDepth: 0 };
+  if (mode === 'near-infinity') return { autofocus: 'off' as const, focusDepth: 0.05 };
+  return { autofocus: 'on' as const };  // hyperfocal → autofocus
+}
+
 const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
   function CameraSection(
-    { fallback, runningOverlay, isRunning, onPermissionGranted, modeColor, idleBadgeText },
+    { fallback, runningOverlay, isRunning, onPermissionGranted, modeColor, idleBadgeText, appliedExposure },
     ref,
   ) {
     const colors = useColors();
     const [cameraPermission, requestCameraPermission] = useCameraPermissions();
     const [mediaGranted, setMediaGranted] = useState(false);
     const cameraRef = useRef<CameraView>(null);
+
+    const focusProps = toFocusProps(appliedExposure?.focusMode);
 
     // Request media permission safely — avoids AUDIO crash in Expo Go by catching it
     const requestMediaSafe = async () => {
@@ -103,7 +113,14 @@ const CameraSection = forwardRef<CameraHandle, CameraSectionProps>(
 
     return (
       <View style={styles.root}>
-        <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" flash="off" />
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFill}
+          facing="back"
+          flash="off"
+          iso={appliedExposure?.iso}
+          {...focusProps}
+        />
 
         {/* Running overlay */}
         {isRunning && runningOverlay && (
