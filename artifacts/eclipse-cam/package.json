@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "expo-camera": "^17.0.10",
-    "expo-media-library": "^18.2.1"
+    "expo-media-library": "^18.2.1",
+    "expo-sharing": "^57.0.7"
   }
 }

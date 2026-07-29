@@ -44,10 +44,12 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
-  // Charger les polices d'icônes via leur méthode dédiée (respecte le bon fontFamily interne)
+  // Charger les polices d'icônes avec require() explicite + noms de famille exacts
   useEffect(() => {
-    Ionicons.loadFont().catch(() => {});
-    MaterialCommunityIcons.loadFont().catch(() => {});
+    Promise.all([
+      Ionicons.loadFont(),
+      MaterialCommunityIcons.loadFont(),
+    ]).catch(() => {});
   }, []);
 
   useEffect(() => {

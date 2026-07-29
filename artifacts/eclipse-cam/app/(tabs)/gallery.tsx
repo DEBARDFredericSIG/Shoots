@@ -11,7 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
@@ -28,24 +28,20 @@ function PhotoGrid({ shots, colors }: { shots: Session['shots']; colors: ReturnT
   const withUri = shots.filter(s => s.uri);
   if (withUri.length === 0) return null;
 
-  const saveToGallery = async (uri: string) => {
+  const sharePhoto = async (uri: string) => {
     setSaving(true);
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission refusée', 'Autorisez l\'accès à la galerie dans les réglages.');
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        Alert.alert('Partage indisponible', 'Le partage n\'est pas disponible sur cet appareil.');
         return;
       }
-      const asset = await MediaLibrary.createAssetAsync(uri);
-      const album = await MediaLibrary.getAlbumAsync('Eclipse Cam');
-      if (!album) {
-        await MediaLibrary.createAlbumAsync('Eclipse Cam', asset, false);
-      } else {
-        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-      }
-      Alert.alert('✓ Sauvegardé', 'Photo ajoutée à l\'album Eclipse Cam.');
+      await Sharing.shareAsync(uri, {
+        mimeType: 'image/jpeg',
+        dialogTitle: 'Partager la photo Eclipse',
+      });
     } catch {
-      Alert.alert('Erreur', 'Impossible de sauvegarder (normal dans Expo Go).');
+      // L'utilisateur a annulé ou erreur silencieuse
     } finally {
       setSaving(false);
     }
@@ -82,10 +78,10 @@ function PhotoGrid({ shots, colors }: { shots: Session['shots']; colors: ReturnT
           <View style={styles.modalActions}>
             <Pressable
               style={[styles.saveBtn, { backgroundColor: saving ? '#444' : '#f09220' }]}
-              onPress={() => selected && saveToGallery(selected)}
+              onPress={() => selected && sharePhoto(selected)}
               disabled={saving}
             >
-              <Text style={styles.saveBtnText}>{saving ? 'Sauvegarde…' : '↓ Sauvegarder'}</Text>
+              <Text style={styles.saveBtnText}>{saving ? 'Partage…' : '↑ Partager'}</Text>
             </Pressable>
             <Pressable style={styles.closeBtn} onPress={() => setSelected(null)}>
               <Text style={styles.closeBtnText}>Fermer</Text>
