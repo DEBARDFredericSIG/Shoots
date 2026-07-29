@@ -15,10 +15,16 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.replit.eclipsecam"
+      "bundleIdentifier": "com.replit.eclipsecam",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Eclipse Cam utilise l'appareil photo pour capturer automatiquement les photos de la séquence.",
+        "NSPhotoLibraryAddUsageDescription": "Eclipse Cam sauvegarde les photos de la séquence dans votre galerie.",
+        "NSMicrophoneUsageDescription": "Accès au micro requis par l'API caméra iOS."
+      }
     },
     "android": {
       "package": "com.replit.eclipsecam",
+      "permissions": ["CAMERA", "READ_MEDIA_IMAGES", "WRITE_EXTERNAL_STORAGE"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#08090e"
