@@ -56,7 +56,6 @@
           "isAccessMediaLocationEnabled": true
         }
       ],
-      "react-native-nitro-modules",
       [
         "react-native-vision-camera",
         {
