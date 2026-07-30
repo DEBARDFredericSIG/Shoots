@@ -5,6 +5,7 @@ on:
     branches: [main, master]
     paths:
       - 'artifacts/eclipse-cam/**'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/build-apk.yml'
   workflow_dispatch:
 
