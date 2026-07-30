@@ -8,6 +8,19 @@ App mobile (Expo/React Native) pour automatiser les séquences de photos lors d'
 - `pnpm --filter @workspace/api-server run dev` — API server (port 5000)
 - `pnpm run typecheck` — vérification TypeScript complète
 
+## Cycle de test Android rapide (éviter les APK à chaque changement)
+
+- `pnpm --filter @workspace/eclipse-cam run test:quick` — test fonctionnel rapide en hot reload (boucle quotidienne)
+- `pnpm --filter @workspace/eclipse-cam run build:android:apk` — APK interne rapide (profil `preview`, QA interne)
+- `pnpm --filter @workspace/eclipse-cam run build:android:apk:milestone` — APK jalon (profil `apk`)
+- `pnpm --filter @workspace/eclipse-cam run build:android:aab:release` — build distribution Play Store (profil `production`, plus lent)
+
+### Quand lancer un build APK/AAB
+
+- **Pas de build natif nécessaire**: changements UI/UX, logique TypeScript, styles, textes, navigation, hooks.
+- **Build APK/AAB requis**: dépendances natives, permissions Android, `app.json`, plugins Expo, montée de SDK/React Native.
+- **Cadence recommandée**: regrouper les changements et limiter les builds lourds à 1–2 fois par jour (ou aux jalons).
+
 ## Stack
 
 - Expo SDK 54, React Native 0.81, Expo Router v6

@@ -5,7 +5,11 @@
   "main": "expo-router/entry",
   "scripts": {
     "dev": "EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN pnpm exec expo start --localhost --port $PORT",
+    "test:quick": "pnpm run dev",
     "build": "node scripts/build.js",
+    "build:android:apk": "eas build --platform android --profile preview",
+    "build:android:apk:milestone": "eas build --platform android --profile apk",
+    "build:android:aab:release": "eas build --platform android --profile production",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
