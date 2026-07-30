@@ -183,7 +183,7 @@ export default function ControllerScreen() {
       <View style={styles.settingsRow}>
         {[
           { label: 'ISO', value: String(currentStep.iso), real: true },
-          { label: 'VITESSE', value: currentStep.shutterSpeed, real: false },
+          { label: 'VITESSE', value: currentStep.shutterSpeed, real: true },
           { label: 'OUVERTURE', value: currentStep.aperture, real: false },
         ].map(item => (
           <View key={item.label} style={[styles.settingBox, !item.real && styles.settingBoxFake]}>
