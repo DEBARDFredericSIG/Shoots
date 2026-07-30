@@ -24,6 +24,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -39,15 +41,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Expo CLI
-        run: pnpm add -g expo-cli @expo/cli
-
       - name: Expo prebuild (generate native Android project)
-        run: npx expo prebuild --platform android --clean --no-install
+        run: pnpm exec expo prebuild --platform android --no-install --non-interactive
         env:
           EXPO_NO_TELEMETRY: 1
 

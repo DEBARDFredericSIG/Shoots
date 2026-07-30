@@ -97,7 +97,20 @@ function prepareDirectories(timestamp) {
   console.log('Build:', timestamp);
 }
 
+function shouldClearMetroCache() {
+  return ['1', 'true', 'yes'].includes(
+    (process.env.EXPO_CLEAR_METRO_CACHE || '').toLowerCase(),
+  );
+}
+
 function clearMetroCache() {
+  if (!shouldClearMetroCache()) {
+    console.log(
+      'Keeping Metro cache for faster builds (set EXPO_CLEAR_METRO_CACHE=1 to clear it)',
+    );
+    return;
+  }
+
   console.log('Clearing Metro cache...');
 
   const cacheDirs = [
