@@ -23,6 +23,31 @@ function findWorkspaceRoot(startDir) {
 
 const workspaceRoot = findWorkspaceRoot(projectRoot);
 const basePath = (process.env.BASE_PATH || '/').replace(/\/+$/, '');
+const corepackBinary = path.join(
+  path.dirname(process.execPath),
+  process.platform === 'win32' ? 'corepack.cmd' : 'corepack',
+);
+
+function getPnpmCommand() {
+  if (process.env.npm_execpath) {
+    return {
+      command: process.execPath,
+      argsPrefix: [process.env.npm_execpath],
+    };
+  }
+
+  if (fs.existsSync(corepackBinary)) {
+    return {
+      command: corepackBinary,
+      argsPrefix: ['pnpm'],
+    };
+  }
+
+  return {
+    command: 'pnpm',
+    argsPrefix: [],
+  };
+}
 
 function exitWithError(message) {
   console.error(message);
@@ -161,9 +186,18 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
     console.log(`Setting EXPO_PUBLIC_REPL_ID=${expoPublicReplId}`);
   }
 
+  const pnpmCommand = getPnpmCommand();
   metroProcess = spawn(
-    'pnpm',
-    ['exec', 'expo', 'start', '--no-dev', '--minify', '--localhost'],
+    pnpmCommand.command,
+    [
+      ...pnpmCommand.argsPrefix,
+      'exec',
+      'expo',
+      'start',
+      '--no-dev',
+      '--minify',
+      '--localhost',
+    ],
     {
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: false,

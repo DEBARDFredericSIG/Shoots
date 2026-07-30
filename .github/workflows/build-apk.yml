@@ -12,6 +12,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      CI: true
+      EXPO_NO_TELEMETRY: 1
     defaults:
       run:
         working-directory: artifacts/eclipse-cam
@@ -30,11 +33,14 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 11.18.0
 
       - name: Install dependencies
         working-directory: .
         run: pnpm install --frozen-lockfile
+
+      - name: Typecheck Eclipse Cam
+        run: pnpm run typecheck
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -47,9 +53,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Expo prebuild (generate native Android project)
-        run: pnpm exec expo prebuild --platform android --no-install --non-interactive
-        env:
-          EXPO_NO_TELEMETRY: 1
+        run: pnpm exec expo prebuild --platform android --clean --no-install --non-interactive
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
@@ -57,11 +61,22 @@ jobs:
       - name: Build APK (release)
         run: |
           cd android
-          ./gradlew assembleRelease --no-daemon \
+          ./gradlew assembleRelease --no-daemon --stacktrace \
             -Pandroid.useAndroidX=true \
             -Pandroid.enableJetifier=true
         env:
           GRADLE_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=512m"
+
+      - name: Upload Android reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eclipse-cam-android-reports
+          path: |
+            artifacts/eclipse-cam/android/**/build/reports/**
+            artifacts/eclipse-cam/android/**/build/outputs/logs/**
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Find APK
         run: find android -name "*.apk" | head -10
