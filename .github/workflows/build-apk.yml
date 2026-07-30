@@ -59,7 +59,8 @@ jobs:
           cd android
           ./gradlew assembleRelease --no-daemon \
             -Pandroid.useAndroidX=true \
-            -Pandroid.enableJetifier=true
+            -Pandroid.enableJetifier=true \
+            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError"
         env:
           GRADLE_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=512m"
 
