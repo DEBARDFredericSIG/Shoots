@@ -58,6 +58,7 @@ jobs:
         run: |
           cd android
           ./gradlew assembleRelease --no-daemon \
+            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" \
             -Pandroid.useAndroidX=true \
             -Pandroid.enableJetifier=true
         env:
