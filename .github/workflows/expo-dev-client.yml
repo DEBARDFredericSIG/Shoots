@@ -1,0 +1,80 @@
+name: Expo Dev Client (Expo Go)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'artifacts/eclipse-cam/app/**'
+      - 'artifacts/eclipse-cam/components/**'
+      - 'artifacts/eclipse-cam/app.json'
+      - 'artifacts/eclipse-cam/eas.json'
+      - 'artifacts/eclipse-cam/package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/expo-dev-client.yml'
+
+jobs:
+  build-dev-client:
+    name: Build Development Client APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: artifacts/eclipse-cam
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        working-directory: .
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Expo CLI
+        run: pnpm add -g @expo/cli
+
+      - name: Expo prebuild (development)
+        run: npx expo prebuild --platform android --clean --no-install
+        env:
+          EXPO_NO_TELEMETRY: 1
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build Debug APK (dev client)
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon \
+            -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" \
+            -Pandroid.useAndroidX=true \
+            -Pandroid.enableJetifier=true
+        env:
+          GRADLE_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=512m"
+
+      - name: Find APK
+        run: find android -name "*.apk" | head -10
+
+      - name: Upload Dev Client APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: eclipse-cam-dev-client
+          path: artifacts/eclipse-cam/android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
