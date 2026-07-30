@@ -15,6 +15,7 @@ import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet, View, Text, Pressable, useWindowDimensions } from 'react-native';
 import {
   Camera,
+  useCameraDevice,
   usePhotoOutput,
   useCameraPermission,
   type CameraRef,
@@ -61,6 +62,7 @@ function CameraSection({
   const colors = useColors();
   const { width: screenW, height: screenH } = useWindowDimensions();
   const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice('back');
   const [mediaGranted, setMediaGranted] = useState(false);
 
   // ref vers le composant Camera VisionCamera v5
@@ -204,6 +206,14 @@ function CameraSection({
   }
 
   // ── Viseur ────────────────────────────────────────────────────────────────
+  if (!device) {
+    return (
+      <View style={styles.root}>
+        {fallback}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
       {/*
@@ -216,7 +226,7 @@ function CameraSection({
       <Camera
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
-        device="back"
+        device={device}
         isActive={true}
         outputs={[photoOutput]}
       />
