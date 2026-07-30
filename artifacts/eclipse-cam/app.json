@@ -55,6 +55,13 @@
           "savePhotosPermission": "Eclipse Cam sauvegarde vos photos dans la galerie.",
           "isAccessMediaLocationEnabled": true
         }
+      ],
+      "react-native-nitro-modules",
+      [
+        "react-native-vision-camera",
+        {
+          "enableMicrophonePermission": false
+        }
       ]
     ],
     "experiments": {
