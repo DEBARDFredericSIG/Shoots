@@ -16,6 +16,8 @@ jobs:
   build:
     name: Flutter APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       # ── 1. Checkout ──────────────────────────────────────────────────────
