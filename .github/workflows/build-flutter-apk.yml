@@ -1,0 +1,86 @@
+name: Build Flutter APK — Eclipse Cam
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/eclipse-cam-flutter/**"
+      - ".github/workflows/build-flutter-apk.yml"
+  pull_request:
+    paths:
+      - "artifacts/eclipse-cam-flutter/**"
+      - ".github/workflows/build-flutter-apk.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Flutter APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Flutter SDK ───────────────────────────────────────────────────
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.3"
+          channel: stable
+          cache: true
+
+      # ── 3. Scaffold Android project (icons, MainActivity, build files) ──
+      # We create a fresh Flutter project in /tmp, then overlay our source
+      # onto it. This avoids committing binary assets (mipmap PNGs) to git.
+      - name: Scaffold base Flutter project
+        run: |
+          flutter create \
+            --project-name eclipse_cam \
+            --org com.eclipsecam \
+            --platforms android \
+            /tmp/eclipse_scaffold
+
+      # ── 4. Overlay our source files ──────────────────────────────────────
+      - name: Overlay source onto scaffold
+        run: |
+          SRC="$GITHUB_WORKSPACE/artifacts/eclipse-cam-flutter"
+          DST="/tmp/eclipse_scaffold"
+
+          # pubspec.yaml (our dependencies)
+          cp "$SRC/pubspec.yaml" "$DST/pubspec.yaml"
+
+          # lib/ (entire app)
+          rm -rf "$DST/lib"
+          cp -r "$SRC/lib" "$DST/lib"
+
+          # AndroidManifest.xml
+          cp "$SRC/android/app/src/main/AndroidManifest.xml" \
+             "$DST/android/app/src/main/AndroidManifest.xml"
+
+          # build.gradle (minSdk 21, minifyEnabled false)
+          cp "$SRC/android/app/build.gradle" \
+             "$DST/android/app/build.gradle"
+
+      # ── 5. Pub get ───────────────────────────────────────────────────────
+      - name: Flutter pub get
+        working-directory: /tmp/eclipse_scaffold
+        run: flutter pub get
+
+      # ── 6. Analyze ───────────────────────────────────────────────────────
+      - name: Flutter analyze
+        working-directory: /tmp/eclipse_scaffold
+        run: flutter analyze --no-fatal-infos
+
+      # ── 7. Build release APK ─────────────────────────────────────────────
+      - name: Build release APK
+        working-directory: /tmp/eclipse_scaffold
+        run: flutter build apk --release --no-tree-shake-icons
+
+      # ── 8. Upload artifact ───────────────────────────────────────────────
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: eclipse-cam-${{ github.sha }}
+          path: /tmp/eclipse_scaffold/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
