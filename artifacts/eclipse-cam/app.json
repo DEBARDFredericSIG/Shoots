@@ -55,6 +55,15 @@
           "savePhotosPermission": "Eclipse Cam sauvegarde vos photos dans la galerie.",
           "isAccessMediaLocationEnabled": true
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false
+          }
+        }
       ]
     ],
     "experiments": {

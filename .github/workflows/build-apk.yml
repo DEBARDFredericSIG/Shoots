@@ -20,15 +20,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
 
       - name: Install dependencies
         working-directory: .
@@ -43,10 +44,20 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Expo CLI
-        run: pnpm add -g expo-cli @expo/cli
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('artifacts/eclipse-cam/package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
-      - name: Expo prebuild (generate native Android project)
+      - name: Install Expo CLI
+        run: pnpm add -g @expo/cli
+
+      - name: Expo prebuild
         run: npx expo prebuild --platform android --clean --no-install
         env:
           EXPO_NO_TELEMETRY: 1
@@ -66,15 +77,7 @@ jobs:
           GRADLE_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=512m"
           NODE_ENV: production
 
-      - name: Build APK (debug — pour diagnostic si le release crashe)
-        run: |
-          cd android
-          ./gradlew assembleDebug --no-daemon \
-            -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8"
-        env:
-          GRADLE_OPTS: "-Xmx4g -XX:MaxMetaspaceSize=512m"
-
-      - name: Find APKs
+      - name: Find APK
         run: find android -name "*.apk" | head -10
 
       - name: Upload APK (release)
@@ -83,10 +86,3 @@ jobs:
           name: eclipse-cam-release
           path: artifacts/eclipse-cam/android/app/build/outputs/apk/release/*.apk
           retention-days: 30
-
-      - name: Upload APK (debug)
-        uses: actions/upload-artifact@v4
-        with:
-          name: eclipse-cam-debug
-          path: artifacts/eclipse-cam/android/app/build/outputs/apk/debug/*.apk
-          retention-days: 7
