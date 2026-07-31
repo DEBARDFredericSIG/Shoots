@@ -63,9 +63,6 @@
   "dependencies": {
     "expo-camera": "^17.0.10",
     "expo-media-library": "^18.2.1",
-    "expo-sharing": "^57.0.7",
-    "react-native-nitro-image": "^0.15.1",
-    "react-native-nitro-modules": "^0.36.3",
-    "react-native-vision-camera": "^5.2.0"
+    "expo-sharing": "^57.0.7"
   }
 }
